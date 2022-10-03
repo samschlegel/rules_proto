@@ -1,6 +1,7 @@
 package rules_python
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/bazelbuild/bazel-gazelle/config"
@@ -66,6 +67,16 @@ func (s *PyLibrary) Rule(otherGen ...*rule.Rule) *rule.Rule {
 	newRule := rule.NewRule(s.Kind(), s.Name())
 
 	newRule.SetAttr("srcs", s.Srcs())
+
+	s.Config.Library.BaseName()
+	stripImportPrefix := s.Config.Library.StripImportPrefix()
+	if stripImportPrefix != "" {
+		relPrefix, err := filepath.Rel(s.Config.Rel, strings.TrimPrefix(stripImportPrefix, "/"))
+		if err != nil {
+			panic(err)
+		}
+		newRule.SetAttr("imports", []string{relPrefix})
+	}
 
 	deps := s.Deps()
 	if len(deps) > 0 {
