@@ -25,7 +25,7 @@ func (p *PyiPlugin) Configure(ctx *protoc.PluginContext) *protoc.PluginConfigura
 	return &protoc.PluginConfiguration{
 		Label: label.New("build_stack_rules_proto", "plugin/builtin", "pyi"),
 		Outputs: protoc.FlatMapFiles(
-			pyiGeneratedFileName(ctx.Rel),
+			pyiGeneratedFileName(ctx.ProtoLibrary.StripImportPrefix(), ctx.Rel),
 			protoc.Always,
 			ctx.ProtoLibrary.Files()...,
 		),
@@ -36,11 +36,15 @@ func (p *PyiPlugin) Configure(ctx *protoc.PluginContext) *protoc.PluginConfigura
 // pyiGeneratedFileName is a utility function that returns a function that
 // computes the name of a predicted generated file having the given
 // extension(s) relative to the given dir.
-func pyiGeneratedFileName(reldir string) func(f *protoc.File) []string {
+func pyiGeneratedFileName(stripImportPrefix, reldir string) func(f *protoc.File) []string {
+	prefix := strings.TrimPrefix(stripImportPrefix, "/")
 	return func(f *protoc.File) []string {
 		name := strings.ReplaceAll(f.Name, "-", "_")
 		if reldir != "" {
 			name = path.Join(reldir, name)
+		}
+		if strings.HasPrefix(name, prefix) {
+			name = strings.TrimPrefix(name[len(prefix):], "/")
 		}
 		return []string{name + "_pb2.pyi"}
 	}

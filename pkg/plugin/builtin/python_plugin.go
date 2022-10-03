@@ -28,7 +28,7 @@ func (p *PythonPlugin) Configure(ctx *protoc.PluginContext) *protoc.PluginConfig
 	flags := parsePythonPluginOptions(p.Name(), ctx.PluginConfig.GetFlags())
 
 	pyFiles := protoc.FlatMapFiles(
-		pythonGeneratedFileName(ctx.Rel),
+		pythonGeneratedFileName(ctx.ProtoLibrary.StripImportPrefix(), ctx.Rel),
 		protoc.Always,
 		ctx.ProtoLibrary.Files()...,
 	)
@@ -51,11 +51,15 @@ func (p *PythonPlugin) Configure(ctx *protoc.PluginContext) *protoc.PluginConfig
 // pythonGeneratedFileName is a utility function that returns a function that
 // computes the name of a predicted generated file having the given
 // extension(s) relative to the given dir.
-func pythonGeneratedFileName(reldir string) func(f *protoc.File) []string {
+func pythonGeneratedFileName(stripImportPrefix, reldir string) func(f *protoc.File) []string {
+	prefix := strings.TrimPrefix(stripImportPrefix, "/")
 	return func(f *protoc.File) []string {
 		name := strings.ReplaceAll(f.Name, "-", "_")
 		if reldir != "" {
 			name = path.Join(reldir, name)
+		}
+		if strings.HasPrefix(name, prefix) {
+			name = strings.TrimPrefix(name[len(prefix):], "/")
 		}
 		return []string{name + "_pb2.py"}
 	}
